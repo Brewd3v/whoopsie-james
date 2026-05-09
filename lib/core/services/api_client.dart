@@ -1,19 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/io_client.dart';
 
 class ApiClient {
-  // paperclip-jam via Tailscale
-  static const _base = 'https://paperclip-jam.reverse-pinecone.ts.net/whoopsie';
+  // paperclip-jam via Tailscale — plain HTTP on IP (DNS/TLS problematic in Flutter)
+  static const _base = 'http://100.123.60.12:5677';
   static const _timeout = Duration(seconds: 8);
 
-  static final _client = IOClient(
-    HttpClient()
-      ..badCertificateCallback = (cert, host, port) => host == 'paperclip-jam.reverse-pinecone.ts.net',
-  );
+  static final _client = http.Client();
 
   // ── Ingest ─────────────────────────────────────────────────────────────────
 
@@ -46,8 +42,8 @@ class ApiClient {
             body: jsonEncode(body),
           )
           .timeout(_timeout);
-    } catch (_) {
-      // Silently drop — offline resilient
+    } catch (e) {
+      debugPrint('[WHOOP] ingest error: $e');
     }
   }
 
@@ -61,7 +57,10 @@ class ApiClient {
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
+      debugPrint('[WHOOP] fetchTodayInsights: HTTP ${res.statusCode}');
+    } catch (e) {
+      debugPrint('[WHOOP] fetchTodayInsights error: $e');
+    }
     return null;
   }
 
@@ -73,7 +72,10 @@ class ApiClient {
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
+      debugPrint('[WHOOP] fetchRecovery: HTTP ${res.statusCode}');
+    } catch (e) {
+      debugPrint('[WHOOP] fetchRecovery error: $e');
+    }
     return null;
   }
 
@@ -87,7 +89,10 @@ class ApiClient {
         final data = jsonDecode(res.body) as Map;
         return (data['data'] as List).cast<Map<String, dynamic>>();
       }
-    } catch (_) {}
+      debugPrint('[WHOOP] fetchHrHistory: HTTP ${res.statusCode}');
+    } catch (e) {
+      debugPrint('[WHOOP] fetchHrHistory error: $e');
+    }
     return [];
   }
 
@@ -101,7 +106,10 @@ class ApiClient {
         final data = jsonDecode(res.body) as Map;
         return (data['history'] as List).cast<Map<String, dynamic>>();
       }
-    } catch (_) {}
+      debugPrint('[WHOOP] fetchHistory: HTTP ${res.statusCode}');
+    } catch (e) {
+      debugPrint('[WHOOP] fetchHistory error: $e');
+    }
     return [];
   }
 
@@ -116,17 +124,23 @@ class ApiClient {
         final data = jsonDecode(res.body) as Map;
         return data['alarm'] as Map<String, dynamic>?;
       }
-    } catch (_) {}
+      debugPrint('[WHOOP] fetchAlarm: HTTP ${res.statusCode}');
+    } catch (e) {
+      debugPrint('[WHOOP] fetchAlarm error: $e');
+    }
     return null;
   }
 
   static Future<bool> isReachable() async {
     try {
+      debugPrint('[WHOOP] isReachable: trying $_base/health');
       final res = await _client
           .get(Uri.parse('$_base/health'))
           .timeout(const Duration(seconds: 4));
+      debugPrint('[WHOOP] isReachable: HTTP ${res.statusCode}');
       return res.statusCode == 200;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[WHOOP] isReachable ERROR: $e');
       return false;
     }
   }

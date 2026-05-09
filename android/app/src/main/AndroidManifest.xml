@@ -38,7 +38,8 @@
     <application
         android:label="WHOOP Connect"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
 
         <!-- Main Flutter activity -->
         <activity
