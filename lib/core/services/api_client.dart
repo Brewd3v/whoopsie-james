@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  // Set this to your own backend URL (see /backend for the FastAPI server)
-  static const _base = 'http://localhost:5677';
+  // paperclip-jam via Tailscale
+  static const _base = 'http://100.123.60.12:5677';
   static const _timeout = Duration(seconds: 8);
 
   static final _client = http.Client();
@@ -100,6 +100,19 @@ class ApiClient {
   }
 
   // ── Health ─────────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>?> fetchAlarm() async {
+    try {
+      final res = await _client
+          .get(Uri.parse('$_base/api/alarm'))
+          .timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map;
+        return data['alarm'] as Map<String, dynamic>?;
+      }
+    } catch (_) {}
+    return null;
+  }
 
   static Future<bool> isReachable() async {
     try {

@@ -171,6 +171,12 @@ class WhoopConnectionManager {
   bool _realtimeStarted = false;
   bool _hapticSent = false;
 
+  // Alarm
+  Timer? _alarmTimer;
+  String? _alarmTime;      // "HH:MM"
+  bool _alarmFired = false;
+  int _alarmFireCount = 0; // haptic pulse count
+
   // Backend ingest throttle — send at most once per second
   Timer? _ingestTimer;
   Timer? _insightsTimer;
@@ -404,6 +410,50 @@ class WhoopConnectionManager {
     // Start backend ingest timer
     _ingestTimer?.cancel();
     _ingestTimer = Timer.periodic(const Duration(seconds: 1), (_) => _sendToBackend());
+
+    // Start alarm polling timer (checks backend every 15s)
+    _alarmTimer?.cancel();
+    _alarmTimer = Timer.periodic(const Duration(seconds: 15), (_) => _pollAlarm());
+
+    // Also poll alarm immediately
+    _pollAlarm();
+  }
+
+  Future<void> _pollAlarm() async {
+    try {
+      final res = await ApiClient.fetchAlarm();
+      if (res != null) {
+        _alarmTime = res['time'] as String?;
+        final enabled = res['enabled'] as bool? ?? true;
+        if (!enabled) _alarmTime = null;
+        // Reset fired flag if alarm time changed
+        _alarmFired = false;
+        _alarmFireCount = 0;
+      }
+    } catch (_) {}
+
+    _checkAlarm();
+  }
+
+  void _checkAlarm() {
+    if (_alarmTime == null || _alarmFired) return;
+    if (_alarmFireCount >= 6) {  // 6 pulses ≈ 30 seconds of haptic
+      _alarmFired = true;
+      return;
+    }
+
+    final now = DateTime.now();
+    final parts = _alarmTime!.split(':');
+    if (parts.length != 2) return;
+    final targetH = int.tryParse(parts[0]);
+    final targetM = int.tryParse(parts[1]);
+    if (targetH == null || targetM == null) return;
+
+    // Fire if within 1 minute of target time
+    if (now.hour == targetH && now.minute == targetM) {
+      _alarmFireCount++;
+      sendHaptic();
+    }
   }
 
   void _sendToBackend() {
@@ -550,6 +600,7 @@ class WhoopConnectionManager {
     _hapticSent = false;
     _ingestTimer?.cancel();
     _insightsTimer?.cancel();
+    _alarmTimer?.cancel();
     _analytics.reset();
   }
 
