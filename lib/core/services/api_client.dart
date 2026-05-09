@@ -1,13 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 
 class ApiClient {
   // paperclip-jam via Tailscale
   static const _base = 'https://paperclip-jam.reverse-pinecone.ts.net/whoopsie';
   static const _timeout = Duration(seconds: 8);
 
-  static final _client = http.Client();
+  static final _client = IOClient(
+    HttpClient()
+      ..badCertificateCallback = (cert, host, port) => host == 'paperclip-jam.reverse-pinecone.ts.net',
+  );
 
   // ── Ingest ─────────────────────────────────────────────────────────────────
 
