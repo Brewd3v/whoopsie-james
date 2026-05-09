@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class ApiClient {
   // paperclip-jam via Tailscale
-  static const _base = 'http://100.123.60.12:5677';
+  static const _base = 'https://paperclip-jam.reverse-pinecone.ts.net/whoopsie';
   static const _timeout = Duration(seconds: 8);
 
   static final _client = http.Client();
